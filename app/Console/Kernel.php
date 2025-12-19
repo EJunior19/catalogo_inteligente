@@ -8,54 +8,48 @@ use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 class Kernel extends ConsoleKernel
 {
     /**
-     * Registrar los comandos de consola
+     * Registrar comandos Artisan
      */
     protected function commands(): void
     {
-        $this->load(__DIR__.'/Commands');
+        $this->load(__DIR__ . '/Commands');
 
         require base_path('routes/console.php');
     }
 
     /**
-     * Definir la programación (cron) de tareas automáticas.
+     * Scheduler de tareas automáticas (PRODUCCIÓN)
      */
     protected function schedule(Schedule $schedule): void
     {
         /**
-         * 🟦 1. IMPORTAR PRODUCTOS DESDE SCRAPER → CATÁLOGO
-         * Se ejecuta una vez al día.
-         * Importa productos nuevos desde la BD del scraper.
+         * 🔵 1. IMPORTAR PRODUCTOS DESDE SCRAPER → CATÁLOGO
+         * Corre cada 3 horas
          */
         $schedule->command('catalogo:importar-desde-scraper --limit=200')
-            ->dailyAt('03:00')                     // a las 3 AM
+            ->everyThreeHours()
             ->withoutOverlapping()
+            ->onOneServer()
             ->runInBackground();
 
         /**
-         * 🟩 2. GENERAR PRESENTACIONES IA
-         * Procesa productos sin presentación IA y les genera:
-         * título, resumen, notas, género, historia, etc.
+         * 🟢 2. GENERAR PRESENTACIONES IA
+         * Corre cada 3 horas
          */
         $schedule->command('catalogo:generar-presentaciones --limit=50')
-            ->hourly()                             // cada hora
+            ->everyThreeHours()
             ->withoutOverlapping()
+            ->onOneServer()
             ->runInBackground();
 
         /**
-         * 🟧 3. ENVIAR PEDIDOS PENDIENTES AL ERP
-         * - Envía cliente
-         * - Envía pedido
-         * - Actualiza estado local (enviado_a_erp, erp_sale_id, etc.)
+         * 🟠 3. ENVIAR PEDIDOS PENDIENTES AL ERP
+         * Corre cada 5 minutos (bien así)
          */
         $schedule->command('erp:enviar-pedidos --limit=50')
             ->everyFiveMinutes()
             ->withoutOverlapping()
+            ->onOneServer()
             ->runInBackground();
-
-        /**
-         * 📝 Ejemplo de comando de debug (opcional)
-         */
-        // $schedule->command('some:debug-command')->everyMinute();
     }
 }
